@@ -26,5 +26,5 @@ for i in range(0,len(pre_data)):
     label.append(int(pre_data[i][1]))
 print(Counter(label))
 
-pd.DataFrame(data=data).to_csv('../data/bgl_data.csv', index=False, header=False)
-pd.DataFrame(data=label).to_csv('../data/bgl_label.csv', index=False, header=False)
+pd.DataFrame(data=data).to_csv('./data/bgl_data.csv', index=False, header=False)
+pd.DataFrame(data=label).to_csv('./data/bgl_label.csv', index=False, header=False)
