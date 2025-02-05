@@ -2,7 +2,7 @@ import json
 import pandas as pd
 import numpy as np
 import keras
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 import time
 
 
