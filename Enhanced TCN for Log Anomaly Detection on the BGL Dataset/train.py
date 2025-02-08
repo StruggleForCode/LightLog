@@ -68,7 +68,8 @@ def read_data(split=0.7):
         for j in range(0, len(data)):  # 遍历该序列中的每个日志事件
             # 根据日志事件编号（编号从1开始，因此索引为 data[j]-1），
             # 从 pca_result 中提取对应的20维语义向量，赋值到矩阵中的第 j 行
-            padding[j] = pca_result[int(data[j] - 1)]
+            padding[j] = ppa_result[int(data[j]-1)]
+            # padding[j] = pca_result[int(data[j] - 1)]
         padding = list(padding)  # 将矩阵转换为列表形式（非必须步骤，但便于后续处理）
         logs.append(padding)  # 将处理后的日志序列添加到 logs 列表中
     logs = np.array(logs)  # 将所有日志序列转换为 NumPy 数组
