@@ -68,7 +68,7 @@ def read_data(split=0.7):
         for j in range(0, len(data)):  # 遍历该序列中的每个日志事件
             # 根据日志事件编号（编号从1开始，因此索引为 data[j]-1），
             # 从 pca_result 中提取对应的20维语义向量，赋值到矩阵中的第 j 行
-            padding[j] = ppa_result[int(data[j]-1)]
+            padding[j] = pca_result[int(data[j]-1)]
             # padding[j] = pca_result[int(data[j] - 1)]
         padding = list(padding)  # 将矩阵转换为列表形式（非必须步骤，但便于后续处理）
         logs.append(padding)  # 将处理后的日志序列添加到 logs 列表中
@@ -182,8 +182,7 @@ def TCN(train_x, train_y, valid_x, valid_y):
     model.fit(train_x, train_y, batch_size=64, epochs=100, verbose=2, validation_data=(valid_x, valid_y))
 
     # 训练完成后，将模型保存到指定文件中
-    model.save('./model/E-TCN.h5')
-
+    model.save('./model/E-TCN-PCA.h5')
 
 # -------------------- 主程序入口 --------------------
 
