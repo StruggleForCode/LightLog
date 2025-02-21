@@ -9,7 +9,7 @@ import sys
 import logging
 
 # 设置日志文件，所有控制台输出同时写入 output.log
-log_file = "./log/train_pca_dim20_epoch150_output.log"
+log_file = "./log/train_pca_dim50_epoch150_output.log"
 logging.basicConfig(level=logging.INFO, format='%(message)s',
                     handlers=[logging.FileHandler(log_file, 'w'), logging.StreamHandler(sys.stdout)])
 
@@ -28,10 +28,10 @@ with open('./data/bgl_semantic_vec.json') as f:
     value = list(gdp_list.values())  # 提取所有语义向量，转换为列表
     log_print(f"Loaded {len(value)} semantic vectors.")
 
-    # Step1-2: 使用主成分分析（PCA）将高维语义向量降至20维
+    # Step1-2: 使用主成分分析（PCA）将高维语义向量降至50维
     from sklearn.decomposition import PCA  # 导入 PCA 模块
 
-    estimator = PCA(n_components=20)  # 创建 PCA 对象，设定目标维度为20
+    estimator = PCA(n_components=50)  # 创建 PCA 对象，设定目标维度为50
     pca_result = estimator.fit_transform(value)
     log_print("PCA transformation completed.")
 
@@ -39,7 +39,7 @@ with open('./data/bgl_semantic_vec.json') as f:
     ppa_result = []  # 初始化一个空列表，用于存放后处理后的向量
     result = pca_result - np.mean(pca_result)
     # 对 PCA 得到的结果进行去均值处理，确保数据中心化（每个特征减去其均值）
-    pca = PCA(n_components=20)  # 再次创建 PCA 对象，目标维度仍然为20
+    pca = PCA(n_components=50)  # 再次创建 PCA 对象，目标维度仍然为50
     pca_result = pca.fit_transform(result)
     # 对中心化后的数据再次进行 PCA 分解
     U = pca.components_  # 获取 PCA 得到的主成分矩阵，每一行对应一个主成分
@@ -56,7 +56,7 @@ with open('./data/bgl_semantic_vec.json') as f:
 def read_data(split=0.7):
     """
     读取日志数据及其对应的标签，并构造固定长度（300）的日志序列，
-    每条日志事件由20维的降维语义向量表示。
+    每条日志事件由50维的降维语义向量表示。
 
     参数：
         split: 训练集与验证集的划分比例（默认为70%训练，30%验证）
@@ -74,11 +74,11 @@ def read_data(split=0.7):
 
     logs = []  # 初始化列表，用于存储每个日志序列的处理结果
     for i in range(0, len(logs_data)):  # 遍历每一条日志序列
-        padding = np.zeros((300, 20))  # 初始化一个大小为 (300, 20) 的零矩阵，300为日志序列的固定长度，20为语义向量的维度
+        padding = np.zeros((300, 50))  # 初始化一个大小为 (300, 50) 的零矩阵，300为日志序列的固定长度，50为语义向量的维度
         data = logs_data[i]  # 取出第 i 条日志序列，每个值代表一个日志事件编号
         for j in range(0, len(data)):  # 遍历该序列中的每个日志事件
             # 根据日志事件编号（编号从1开始，因此索引为 data[j]-1），
-            # 从 pca_result 中提取对应的20维语义向量，赋值到矩阵中的第 j 行
+            # 从 pca_result 中提取对应的50维语义向量，赋值到矩阵中的第 j 行
             padding[j] = pca_result[int(data[j]-1)]
             # padding[j] = pca_result[int(data[j] - 1)]
         padding = list(padding)  # 将矩阵转换为列表形式（非必须步骤，但便于后续处理）
@@ -92,9 +92,9 @@ def read_data(split=0.7):
     train_y = label[:split_boundary]  # 取对应的标签作为训练集标签
     valid_y = label[split_boundary:]  # 取对应的标签作为验证集标签
 
-    # 重塑数据形状，确保每个样本均为 (300, 20)
-    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 20))
-    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 20))
+    # 重塑数据形状，确保每个样本均为 (300, 50)
+    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 50))
+    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 50))
 
     # 将标签转换为 one-hot 编码格式，适用于分类任务
     train_y = keras.utils.to_categorical(np.array(train_y))
@@ -161,8 +161,8 @@ def TCN(train_x, train_y, valid_x, valid_y):
         train_x, train_y: 训练集数据和标签
         valid_x, valid_y: 验证集数据和标签
     """
-    # 定义模型输入，输入形状为 (300, 20) —— 300为日志序列长度，20为每条日志的特征维度
-    inputs = Input(shape=(300, 20))
+    # 定义模型输入，输入形状为 (300, 50) —— 300为日志序列长度，50为每条日志的特征维度
+    inputs = Input(shape=(300, 50))
 
     # 通过堆叠多个残差块构建模型，各残差块采用不同扩张率以捕捉不同尺度的时序依赖
     x = ResBlock(inputs, filters=3, kernel_size=3, dilation_rate=1)  # 第一层残差块，扩张率为1
@@ -195,7 +195,7 @@ def TCN(train_x, train_y, valid_x, valid_y):
     model.fit(train_x, train_y, batch_size=64, epochs=150, verbose=2, validation_data=(valid_x, valid_y))
 
     # 训练完成后，将模型保存到指定文件中
-    model.save('./model/E-TCN-PCA-DIM20-EPOCH150.h5')
+    model.save('./model/E-TCN-PCA-DIM50-EPOCH150.h5')
 
 # -------------------- 主程序入口 --------------------
 

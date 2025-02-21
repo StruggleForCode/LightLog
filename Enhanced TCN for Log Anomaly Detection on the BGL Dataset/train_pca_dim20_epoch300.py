@@ -5,24 +5,35 @@ import numpy as np  # 用于数值计算和数组操作
 import keras  # 导入 Keras 框架（用于构建和训练神经网络）
 from tensorflow.keras.models import Model  # 导入 Model 类，用于构建神经网络模型
 from tensorflow.keras.layers import add, Input, Conv1D, Activation, Flatten, Dense, GlobalAveragePooling1D
+import sys
+import logging
 
-# 导入各类网络层：add（张量相加）、Input（输入层）、Conv1D（一维卷积层）、Activation（激活层）、Flatten（展平层）、Dense（全连接层）、
-# GlobalAveragePooling1D（全局平均池化层）
+# 设置日志文件，所有控制台输出同时写入 output.log
+log_file = "./log/train_pca_dim20_epoch300_output.log"
+logging.basicConfig(level=logging.INFO, format='%(message)s',
+                    handlers=[logging.FileHandler(log_file, 'w'), logging.StreamHandler(sys.stdout)])
+
+
+def log_print(*args, **kwargs):
+    """封装 print，使其输出到日志文件和控制台"""
+    print(*args, **kwargs)
+    logging.info(' '.join(map(str, args)))
+
 
 # -------------------- 语义向量降维及后处理 --------------------
-
-# 打开并加载语义向量文件，文件存储了每个日志事件的高维语义向量
+log_print("Loading semantic vector JSON file...")
 with open('./data/bgl_semantic_vec.json') as f:
     # Step1-1: 从 JSON 文件中加载数据
     gdp_list = json.load(f)  # 读取 JSON 数据，返回一个字典，其中键对应日志事件ID，值为对应的语义向量
     value = list(gdp_list.values())  # 提取所有语义向量，转换为列表
+    log_print(f"Loaded {len(value)} semantic vectors.")
 
     # Step1-2: 使用主成分分析（PCA）将高维语义向量降至20维
     from sklearn.decomposition import PCA  # 导入 PCA 模块
 
     estimator = PCA(n_components=20)  # 创建 PCA 对象，设定目标维度为20
     pca_result = estimator.fit_transform(value)
-    # 对原始语义向量进行拟合与转换，返回每个向量在20个主成分方向上的投影，保留了数据中大部分的方差信息
+    log_print("PCA transformation completed.")
 
     # Step1-3: 投影后处理调整（PPA）：对降维结果进一步去均值和剔除全局主导分量
     ppa_result = []  # 初始化一个空列表，用于存放后处理后的向量
@@ -38,10 +49,10 @@ with open('./data/bgl_semantic_vec.json') as f:
             x = x - np.dot(u.transpose(), x) * u
         ppa_result.append(list(x))  # 将剔除全局分量后的向量以列表形式加入结果列表中
     ppa_result = np.array(ppa_result)  # 将列表转换为 NumPy 数组，便于后续计算
+    log_print("PPA post-processing completed.")
 
 
 # -------------------- 数据读取与构建 --------------------
-
 def read_data(split=0.7):
     """
     读取日志数据及其对应的标签，并构造固定长度（300）的日志序列，
@@ -54,12 +65,12 @@ def read_data(split=0.7):
         train_x, train_y: 训练集数据及标签
         valid_x, valid_y: 验证集数据及标签
     """
-    # 从 CSV 文件中读取日志数据，文件中每行包含一个日志序列，各值为日志事件的编号
-    logs_data = pd.read_csv('./data/bgl_data.csv')
-    logs_data = logs_data.values  # 将 DataFrame 转换为 NumPy 数组
+    log_print("Reading data from CSV files...")
+    # 从 CSV 文件中读取日志数据，文件中每行包含一个日志序列，各值为日志事件
+    logs_data = pd.read_csv('./data/bgl_data.csv').values
     # 从 CSV 文件中读取日志标签，标签用于判断序列是否异常
-    label = pd.read_csv('./data/bgl_label.csv')
-    label = label.values  # 将 DataFrame 转换为 NumPy 数组
+    label = pd.read_csv('./data/bgl_label.csv').values
+    log_print(f"Loaded {len(logs_data)} log sequences.")
 
     logs = []  # 初始化列表，用于存储每个日志序列的处理结果
     for i in range(0, len(logs_data)):  # 遍历每一条日志序列
@@ -89,6 +100,7 @@ def read_data(split=0.7):
     train_y = keras.utils.to_categorical(np.array(train_y))
     valid_y = keras.utils.to_categorical(np.array(valid_y))
 
+    log_print("Data successfully loaded and preprocessed.")
     return train_x, train_y, valid_x, valid_y  # 返回训练集与验证集的数据和标签
 
 
@@ -131,6 +143,7 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
 
 
 # -------------------- TCN 模型构建与训练 --------------------
+
 
 '''
 说明：
