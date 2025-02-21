@@ -1,0 +1,8 @@
+995
+5
+997
+3
+
+The detection time is 0.27281466699787416
+TP,FP,TN,FN are:  [995, 5, 997, 3]
+Precision, Recall, F1-measure are: 0.997 0.9950099800399201 0.9960039960039959
