@@ -41,17 +41,17 @@ with open('./data/hdfs_semantic_vec.json') as f:
     # 提取字典中所有的value，构成一个列表，每个value代表一个300维向量
     value = list(gdp_list.values())
 
-    # Step1-2: 使用PCA对数据进行初步降维到20维
+    # Step1-2: 使用PCA对数据进行初步降维到25维
     from sklearn.decomposition import PCA  # 导入sklearn库中的PCA模块
-    estimator = PCA(n_components=20)  # 创建PCA对象，将目标维数设为20
-    pca_result = estimator.fit_transform(value)  # 对300维数据进行PCA降维，得到20维表示
+    estimator = PCA(n_components=25)  # 创建PCA对象，将目标维数设为25
+    pca_result = estimator.fit_transform(value)  # 对300维数据进行PCA降维，得到25维表示
 
     # Step1-3: 进行PPA处理，即对降维后的数据去均值并进一步调整
     ppa_result = []  # 初始化列表，用于存储PPA处理后的结果
     # 对pca_result进行去均值操作，每个样本向量减去整个数据集的均值
     result = pca_result - np.mean(pca_result)
-    # 再次进行PCA降维（此处依然设置n_components=20），用于获取主成分
-    pca = PCA(n_components=20)
+    # 再次进行PCA降维（此处依然设置n_components=25），用于获取主成分
+    pca = PCA(n_components=25)
     pca_result = pca.fit_transform(result)
     # 获取PCA得到的主成分（每一行是一个主成分对应的向量）
     U = pca.components_
@@ -83,15 +83,15 @@ def read_data(path, split=0.7):
     logs = []  # 用于存储每条日志数据的向量表示
     # 遍历所有日志数据
     for i in range(0, len(logs_data)):
-        # 初始化一个形状为(300,20)的零数组，300表示日志中最多包含300个事件，20为每个事件的向量维度
-        padding = np.zeros((300, 20))
+        # 初始化一个形状为(300,25)的零数组，300表示日志中最多包含300个事件，25为每个事件的向量维度
+        padding = np.zeros((300, 25))
         # 获取第i条日志数据（字符串形式）
         data = logs_data[i]
         # 将字符串按照空格分割，并将每个分割后的数字转换为整数，得到事件索引列表
         data = [int(n) for n in data.split()]
         # 遍历当前日志中的每个事件索引
         for j in range(0, len(data)):
-            # 根据事件索引从预处理好的ppa_result中获取对应的20维向量，填入padding数组中对应的位置
+            # 根据事件索引从预处理好的ppa_result中获取对应的25维向量，填入padding数组中对应的位置
             padding[j] = ppa_result[data[j]]
         # 将padding数组转换为列表形式后添加到logs列表中
         padding = list(padding)
@@ -108,10 +108,10 @@ def read_data(path, split=0.7):
     train_y = label[:split_boundary]
     # 剩余标签作为验证集标签
     valid_y = label[split_boundary:]
-    # 重塑训练集数据的形状为 (样本数, 300, 20)
-    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 20))
-    # 重塑验证集数据的形状为 (样本数, 300, 20)
-    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 20))
+    # 重塑训练集数据的形状为 (样本数, 300, 25)
+    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 25))
+    # 重塑验证集数据的形状为 (样本数, 300, 25)
+    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 25))
     # 将标签转换为one-hot编码形式，便于分类任务训练
     train_y = keras.utils.to_categorical(np.array(train_y))
     valid_y = keras.utils.to_categorical(np.array(valid_y))
@@ -148,8 +148,8 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
     Step3: 训练模型。由于我们提出的方法效果较好，因此参数未做过多优化。后续可以通过参数调优进一步提升效果。
 '''
 def TCN(train_x, train_y, valid_x, valid_y):
-    # 定义模型输入，形状为(300,20)，代表每条日志有300个事件，每个事件20维
-    inputs = Input(shape=(300, 20))
+    # 定义模型输入，形状为(300,25)，代表每条日志有300个事件，每个事件25维
+    inputs = Input(shape=(300, 25))
     # 第一个残差块：设置过滤器数量为3，卷积核大小为3，扩张系数为1
     x = ResBlock(inputs, filters=3, kernel_size=3, dilation_rate=1)
     # 第二个残差块：扩张系数增大为2
@@ -174,7 +174,7 @@ def TCN(train_x, train_y, valid_x, valid_y):
     # 开始训练模型：设置批次大小为64，训练100个epoch，verbose=2显示训练过程，并使用验证集数据进行验证
     model.fit(train_x, train_y, batch_size=64, epochs=100, verbose=2, validation_data=(valid_x, valid_y))
     # 指定训练后模型的保存路径
-    model_path = './model/E_TCN_GAP_dim20.h5'
+    model_path = './model/E_TCN_GAP_dim25.h5'
     # 将训练好的模型保存到指定文件中
     model.save(model_path)
 
