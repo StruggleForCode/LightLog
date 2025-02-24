@@ -1,0 +1,10 @@
+18677
+379
+10829
+25
+
+59/59 ━━━━━━━━━━━━━━━━━━━━ 1s 21ms/step
+The detection time is 2.329402500006836
+E-TCN-PCA-DIM30-EPOCH100
+TP, FP, TN, FN are:  [18677, 379, 10829, 25]
+Precision, Recall, F1-measure are: 0.9976967016768011 0.9661848679514632 0.981687970265615

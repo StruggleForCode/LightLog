@@ -1,0 +1,7 @@
+Loading semantic vector JSON file...
+Loaded 378 semantic vectors.
+PCA transformation completed.
+PPA post-processing completed.
+Reading data from CSV files...
+Loaded 99699 log sequences.
+Data successfully loaded and preprocessed.

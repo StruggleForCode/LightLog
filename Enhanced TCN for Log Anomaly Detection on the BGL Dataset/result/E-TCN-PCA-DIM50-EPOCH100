@@ -1,0 +1,14 @@
+18321
+735
+10635
+219
+
+
+/Users/leehao/anaconda3/envs/py3115/bin/python /Users/leehao/code/PyCharm/LightLog/Enhanced TCN for Log Anomaly Detection on the BGL Dataset/test_bgl_pca_dim50_epoch100.py
+59/59 ━━━━━━━━━━━━━━━━━━━━ 1s 23ms/step
+The detection time is 2.909039333986584
+E-TCN-PCA-DIM50-EPOCH100
+TP, FP, TN, FN are:  [18321, 735, 10635, 219]
+Precision, Recall, F1-measure are: 0.9798231066887784 0.9353562005277045 0.95707343412527
+
+Process finished with exit code 0

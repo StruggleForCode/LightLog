@@ -1,0 +1,10 @@
+19040
+16
+10854
+0
+
+59/59 ━━━━━━━━━━━━━━━━━━━━ 1s 19ms/step
+The detection time is 2.1136458329856396
+E-TCN-PCA-DIM30-EPOCH200
+TP, FP, TN, FN are:  [19040, 16, 10854, 0]
+Precision, Recall, F1-measure are: 1.0 0.9985280588776448 0.9992634873872215
