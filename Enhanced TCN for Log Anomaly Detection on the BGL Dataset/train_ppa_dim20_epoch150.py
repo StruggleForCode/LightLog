@@ -5,13 +5,11 @@ import numpy as np  # 用于数值计算和数组操作
 import keras  # 导入 Keras 框架（用于构建和训练神经网络）
 from tensorflow.keras.models import Model  # 导入 Model 类，用于构建神经网络模型
 from tensorflow.keras.layers import add, Input, Conv1D, Activation, Flatten, Dense, GlobalAveragePooling1D
-from tensorflow.keras.layers import Dropout, BatchNormalization
 import sys
 import logging
-import time  # 导入时间模块，用于记录处理时间
 
 # 设置日志文件，所有控制台输出同时写入 output.log
-log_file = "./log/train_pca_dim30_epoch150_output.log"
+log_file = "./log/train_ppa_dim20_epoch150_output.log"
 logging.basicConfig(level=logging.INFO, format='%(message)s',
                     handlers=[logging.FileHandler(log_file, 'w'), logging.StreamHandler(sys.stdout)])
 
@@ -30,10 +28,10 @@ with open('./data/bgl_semantic_vec.json') as f:
     value = list(gdp_list.values())  # 提取所有语义向量，转换为列表
     log_print(f"Loaded {len(value)} semantic vectors.")
 
-    # Step1-2: 使用主成分分析（PCA）将高维语义向量降至30维
+    # Step1-2: 使用主成分分析（PCA）将高维语义向量降至20维
     from sklearn.decomposition import PCA  # 导入 PCA 模块
 
-    estimator = PCA(n_components=30)  # 创建 PCA 对象，设定目标维度为30
+    estimator = PCA(n_components=20)  # 创建 PCA 对象，设定目标维度为20
     pca_result = estimator.fit_transform(value)
     log_print("PCA transformation completed.")
 
@@ -41,7 +39,7 @@ with open('./data/bgl_semantic_vec.json') as f:
     ppa_result = []  # 初始化一个空列表，用于存放后处理后的向量
     result = pca_result - np.mean(pca_result)
     # 对 PCA 得到的结果进行去均值处理，确保数据中心化（每个特征减去其均值）
-    pca = PCA(n_components=30)  # 再次创建 PCA 对象，目标维度仍然为30
+    pca = PCA(n_components=20)  # 再次创建 PCA 对象，目标维度仍然为20
     pca_result = pca.fit_transform(result)
     # 对中心化后的数据再次进行 PCA 分解
     U = pca.components_  # 获取 PCA 得到的主成分矩阵，每一行对应一个主成分
@@ -58,7 +56,7 @@ with open('./data/bgl_semantic_vec.json') as f:
 def read_data(split=0.7):
     """
     读取日志数据及其对应的标签，并构造固定长度（300）的日志序列，
-    每条日志事件由30维的降维语义向量表示。
+    每条日志事件由20维的降维语义向量表示。
 
     参数：
         split: 训练集与验证集的划分比例（默认为70%训练，30%验证）
@@ -76,13 +74,13 @@ def read_data(split=0.7):
 
     logs = []  # 初始化列表，用于存储每个日志序列的处理结果
     for i in range(0, len(logs_data)):  # 遍历每一条日志序列
-        padding = np.zeros((300, 30))  # 初始化一个大小为 (300, 30) 的零矩阵，300为日志序列的固定长度，30为语义向量的维度
+        padding = np.zeros((300, 20))  # 初始化一个大小为 (300, 20) 的零矩阵，300为日志序列的固定长度，20为语义向量的维度
         data = logs_data[i]  # 取出第 i 条日志序列，每个值代表一个日志事件编号
         for j in range(0, len(data)):  # 遍历该序列中的每个日志事件
             # 根据日志事件编号（编号从1开始，因此索引为 data[j]-1），
-            # 从 pca_result 中提取对应的30维语义向量，赋值到矩阵中的第 j 行
-            padding[j] = pca_result[int(data[j]-1)]
-            # padding[j] = pca_result[int(data[j] - 1)]
+            # 从 pca_result 中提取对应的20维语义向量，赋值到矩阵中的第 j 行
+            #padding[j] = pca_result[int(data[j]-1)]
+            padding[j] = ppa_result[int(data[j] - 1)]
         padding = list(padding)  # 将矩阵转换为列表形式（非必须步骤，但便于后续处理）
         logs.append(padding)  # 将处理后的日志序列添加到 logs 列表中
     logs = np.array(logs)  # 将所有日志序列转换为 NumPy 数组
@@ -94,9 +92,9 @@ def read_data(split=0.7):
     train_y = label[:split_boundary]  # 取对应的标签作为训练集标签
     valid_y = label[split_boundary:]  # 取对应的标签作为验证集标签
 
-    # 重塑数据形状，确保每个样本均为 (300, 30)
-    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 30))
-    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 30))
+    # 重塑数据形状，确保每个样本均为 (300, 20)
+    train_x = np.reshape(train_x, (train_x.shape[0], train_x.shape[1], 20))
+    valid_x = np.reshape(valid_x, (valid_x.shape[0], valid_x.shape[1], 20))
 
     # 将标签转换为 one-hot 编码格式，适用于分类任务
     train_y = keras.utils.to_categorical(np.array(train_y))
@@ -123,14 +121,11 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
     """
     # 第一层卷积：一维卷积，输出通道数为 filters，卷积核大小为 kernel_size，
     # 采用 'same' 填充，扩张率为 dilation_rate，并使用 ReLU 激活函数
-    r = Conv1D(filters, kernel_size, padding='same', dilation_rate=dilation_rate)(x)
-    r = BatchNormalization()(r)  # 添加 Batch Normalization 层
-    r = Activation('relu')(r)
+    r = Conv1D(filters, kernel_size, padding='same', dilation_rate=dilation_rate, activation='relu')(x)
 
     # 第二层卷积：一维卷积，输出通道数固定为 1，卷积核大小为 3，使用 'same' 填充和相同扩张率
     # 注：可在此处添加 Batch Normalization 或 Weight Normalization（此处已注释掉）
     r = Conv1D(1, 3, padding='same', dilation_rate=dilation_rate)(r)
-    r = BatchNormalization()(r)  # 添加 Batch Normalization 层
 
     # 判断输入 x 的通道数是否与 filters 相等
     if x.shape[-1] == filters:
@@ -143,7 +138,6 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
     o = add([r, shortcut])
     # 对相加结果进行 ReLU 激活
     o = Activation('relu')(o)
-    o = Dropout(0.3)(o)  # 添加 Dropout 层，防止过拟合
 
     return o  # 返回残差块的输出
 
@@ -167,8 +161,8 @@ def TCN(train_x, train_y, valid_x, valid_y):
         train_x, train_y: 训练集数据和标签
         valid_x, valid_y: 验证集数据和标签
     """
-    # 定义模型输入，输入形状为 (300, 30) —— 300为日志序列长度，30为每条日志的特征维度
-    inputs = Input(shape=(300, 30))
+    # 定义模型输入，输入形状为 (300, 20) —— 300为日志序列长度，20为每条日志的特征维度
+    inputs = Input(shape=(300, 20))
 
     # 通过堆叠多个残差块构建模型，各残差块采用不同扩张率以捕捉不同尺度的时序依赖
     x = ResBlock(inputs, filters=3, kernel_size=3, dilation_rate=1)  # 第一层残差块，扩张率为1
@@ -196,21 +190,12 @@ def TCN(train_x, train_y, valid_x, valid_y):
     # 编译模型：使用 Adam 优化器，损失函数为二分类交叉熵，并以准确率作为评估指标
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-    # 添加 EarlyStopping 回调
-    # from tensorflow.keras.callbacks import EarlyStopping
-    # early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
-    start = time.perf_counter()  # 记录开始时间
-
     # 训练模型：设定 batch_size 为 64，训练 100 个 epoch，verbose=2 表示输出训练过程简略信息
     # 同时在验证集上监控模型性能
     model.fit(train_x, train_y, batch_size=64, epochs=150, verbose=2, validation_data=(valid_x, valid_y))
 
     # 训练完成后，将模型保存到指定文件中
-    model.save('./model/E-TCN-PCA-DIM30-EPOCH150-DropOut.h5')
-    end = time.perf_counter()  # 记录结束时间
-    print('The train time is', end - start)  # 输出检测时间
-
+    model.save('./model/E-TCN-PPA-DIM20-EPOCH150.h5')
 
 # -------------------- 主程序入口 --------------------
 

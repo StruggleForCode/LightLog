@@ -23,7 +23,7 @@ def log_print(*args, **kwargs):
 log_print("Loading semantic vector JSON file...")
 with open('./data/bgl_semantic_vec.json') as f:
     gdp_list = json.load(f)
-    semantic_vectors = np.array(list(gdp_list.values()))  # 直接使用 300 维向量
+    semantic_vectors = np.array(list(gdp_list.values()), dtype=np.float32)  # 直接使用 300 维向量
     log_print(f"Loaded {len(semantic_vectors)} semantic vectors.")
 
 
@@ -84,4 +84,4 @@ def TCN(train_x, train_y, valid_x, valid_y):
 
 # Load data and train model
 train_x, train_y, valid_x, valid_y = read_data()
-TCN(train_x, train_y, valid_x, valid_y)
+y_pred = TCN(train_x, train_y, valid_x, valid_y)

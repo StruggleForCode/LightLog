@@ -5,13 +5,12 @@ import numpy as np  # 用于数值计算和数组操作
 import keras  # 导入 Keras 框架（用于构建和训练神经网络）
 from tensorflow.keras.models import Model  # 导入 Model 类，用于构建神经网络模型
 from tensorflow.keras.layers import add, Input, Conv1D, Activation, Flatten, Dense, GlobalAveragePooling1D
-from tensorflow.keras.layers import Dropout, BatchNormalization
 import sys
 import logging
 import time  # 导入时间模块，用于记录处理时间
 
 # 设置日志文件，所有控制台输出同时写入 output.log
-log_file = "./log/train_pca_dim30_epoch150_output.log"
+log_file = "./log/train_ppa_dim30_Flatten_epoch150_output.log"
 logging.basicConfig(level=logging.INFO, format='%(message)s',
                     handlers=[logging.FileHandler(log_file, 'w'), logging.StreamHandler(sys.stdout)])
 
@@ -81,7 +80,7 @@ def read_data(split=0.7):
         for j in range(0, len(data)):  # 遍历该序列中的每个日志事件
             # 根据日志事件编号（编号从1开始，因此索引为 data[j]-1），
             # 从 pca_result 中提取对应的30维语义向量，赋值到矩阵中的第 j 行
-            padding[j] = pca_result[int(data[j]-1)]
+            padding[j] = ppa_result[int(data[j]-1)]
             # padding[j] = pca_result[int(data[j] - 1)]
         padding = list(padding)  # 将矩阵转换为列表形式（非必须步骤，但便于后续处理）
         logs.append(padding)  # 将处理后的日志序列添加到 logs 列表中
@@ -123,14 +122,11 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
     """
     # 第一层卷积：一维卷积，输出通道数为 filters，卷积核大小为 kernel_size，
     # 采用 'same' 填充，扩张率为 dilation_rate，并使用 ReLU 激活函数
-    r = Conv1D(filters, kernel_size, padding='same', dilation_rate=dilation_rate)(x)
-    r = BatchNormalization()(r)  # 添加 Batch Normalization 层
-    r = Activation('relu')(r)
+    r = Conv1D(filters, kernel_size, padding='same', dilation_rate=dilation_rate, activation='relu')(x)
 
     # 第二层卷积：一维卷积，输出通道数固定为 1，卷积核大小为 3，使用 'same' 填充和相同扩张率
     # 注：可在此处添加 Batch Normalization 或 Weight Normalization（此处已注释掉）
     r = Conv1D(1, 3, padding='same', dilation_rate=dilation_rate)(r)
-    r = BatchNormalization()(r)  # 添加 Batch Normalization 层
 
     # 判断输入 x 的通道数是否与 filters 相等
     if x.shape[-1] == filters:
@@ -143,7 +139,6 @@ def ResBlock(x, filters, kernel_size, dilation_rate):
     o = add([r, shortcut])
     # 对相加结果进行 ReLU 激活
     o = Activation('relu')(o)
-    o = Dropout(0.3)(o)  # 添加 Dropout 层，防止过拟合
 
     return o  # 返回残差块的输出
 
@@ -177,10 +172,10 @@ def TCN(train_x, train_y, valid_x, valid_y):
     x = ResBlock(x, filters=3, kernel_size=3, dilation_rate=8)  # 第四层残差块，扩张率为8
 
     # 可选：使用 Flatten 层将卷积输出展平（此处注释，采用全局池化）
-    # x = Flatten()(x)
+    x = Flatten()(x)
 
     # 使用全局平均池化层，对时间维度（300）进行池化，得到固定长度的特征向量
-    x = GlobalAveragePooling1D()(x)
+    # x = GlobalAveragePooling1D()(x)
 
     # 添加全连接层，将特征映射到2个输出神经元，用于二分类（例如：正常 vs 异常），使用 softmax 激活函数
     x = Dense(2, activation='softmax')(x)
@@ -196,10 +191,6 @@ def TCN(train_x, train_y, valid_x, valid_y):
     # 编译模型：使用 Adam 优化器，损失函数为二分类交叉熵，并以准确率作为评估指标
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 
-    # 添加 EarlyStopping 回调
-    # from tensorflow.keras.callbacks import EarlyStopping
-    # early_stopping = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
     start = time.perf_counter()  # 记录开始时间
 
     # 训练模型：设定 batch_size 为 64，训练 100 个 epoch，verbose=2 表示输出训练过程简略信息
@@ -207,10 +198,9 @@ def TCN(train_x, train_y, valid_x, valid_y):
     model.fit(train_x, train_y, batch_size=64, epochs=150, verbose=2, validation_data=(valid_x, valid_y))
 
     # 训练完成后，将模型保存到指定文件中
-    model.save('./model/E-TCN-PCA-DIM30-EPOCH150-DropOut.h5')
+    model.save('./model/E-TCN-PPA-DIM30-Flatten-EPOCH150.h5')
     end = time.perf_counter()  # 记录结束时间
     print('The train time is', end - start)  # 输出检测时间
-
 
 # -------------------- 主程序入口 --------------------
 
